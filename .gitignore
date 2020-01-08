@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+# User Define
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+compile_commands.json
+objectTracking*
