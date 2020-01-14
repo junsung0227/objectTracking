@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            //"args": ["--video ./traffic.mp4 --tracker csrt"]
+            "args": ["--video", "t1.mp4", "--tracker", "csrt"]
         }
     ]
 }
