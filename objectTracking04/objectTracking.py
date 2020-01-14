@@ -65,15 +65,20 @@ while True:
     (H, W) = frame.shape[:2]
 
     # check to see if we are currently tracking an object
-    if initBB is not None:
+    if initBB is not None:        
         # grab the new bounding box coordinates of the object
-        (success, box) = tracker.update(frame)
-        
+        (success, box) = tracker.update(frame)        
 
         # check to see if the tracking was a success
         if success:
             (x, y, w, h) = [int(v) for v in box]
             cv2.rectangle(frame, (x, y), (x + w, y + h),(0, 255, 0), 2) # draw a rectangle
+            failCount=0    # junsung0227 add
+        else:
+            failCount-=1    # junsung0227 add
+
+        if failCount < -30:   # junsung0227 add, if 30 countinuous fails then stop tracking
+            initBB = None
 
         # update the FPS counter
         fps.update()
@@ -85,13 +90,13 @@ while True:
             ("Tracker", args["tracker"]),
             ("Success", "Yes" if success else "No"),
             ("FPS", "{:.2f}".format(fps.fps())),
+            ("Fail Count", "{:d}".format(failCount))
         ]
 
         # loop over the info tuples and draw them on our frame
         for (i, (k, v)) in enumerate(info):
             text = "{}: {}".format(k, v)
-            cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            cv2.putText(frame, text, (10, H - ((i * 20) + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
     
     # show the output frame
     cv2.imshow("Frame", frame)
@@ -107,3 +112,4 @@ while True:
         tracker = OPENCV_OBJECT_TRACKERS[args["tracker"]]() # junsung0227 need to reset the tracker
         tracker.init(frame, initBB)        
         fps = FPS().start()
+        failCount = 0   # junsung0227 add
