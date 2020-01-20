@@ -1,71 +1,28 @@
+///////////////////////////////////////////////////////////////////////////
+//
+//  Creadted : Junsung Bae(junsung0227@koreanair.com)
+//  Created Date : 2020-1-17
+//  Version : 1.0
+//  Description
+//      - Convert python objectTrakcing04 to cpp language.
+//      - Add some convenient user interfaces
+//  TO-DO Lists
+//      -
+///////////////////////////////////////////////////////////////////////////
+
 // General includes
 #include <iostream>
 
 // OpenCV includes
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/tracking.hpp>
 
 using namespace std;
 using namespace cv;
 
 // user selected bounding box
-Rect boundingBox;
-
-// for mouseEventHandel
-bool isMouseButtonDown = false;
-
-// display mode define
-typedef enum {
-                PLAY,                   // just play the video
-                SELECTING_BOUNDINGBOX,  // selecting target object to track
-                PLAY_WITH_TRACKING      // tracking
-             } DISPLAYMODE;
-             
-// dispaly mode
-DISPLAYMODE displayMode = PLAY;
-
-void onMouse(int mevent, int x, int y, int flags, void *param)
-{
-    static Point leftButtonDownPosition;
-
-    Mat *pMat = (Mat *)param;
-    Mat image = Mat(*pMat);
-
-    // if the left mouse button is down status, we caculate the new position
-    if (isMouseButtonDown)
-    {
-    	boundingBox.x = MIN(x, leftButtonDownPosition.x);
-    	boundingBox.y = MIN(y, leftButtonDownPosition.y);
-    	boundingBox.width = boundingBox.x + abs(x - leftButtonDownPosition.x);
-    	boundingBox.height = boundingBox.y + abs(y - leftButtonDownPosition.y);
-
-    	boundingBox.x = MAX(boundingBox.x, 0);
-    	boundingBox.y = MAX(boundingBox.y, 0);
-    	boundingBox.width = MIN(boundingBox.width, image.cols);
-    	boundingBox.height = MIN(boundingBox.height, image.rows);
-    	boundingBox.width -= boundingBox.x;
-    	boundingBox.height -= boundingBox.y;
-    }
-
-    switch (mevent)
-    {   
-        case EVENT_LBUTTONDOWN: // Start point of the bounding box, so we can get the x, y position 
-            leftButtonDownPosition = Point(x, y);
-            boundingBox = Rect(x, y, 0, 0);
-            isMouseButtonDown = true;
-            break;
-        case EVENT_LBUTTONUP:   // End point of the bounding box, so we will calculate and get the width and height        
-            isMouseButtonDown = false;
-            if (boundingBox.width > 0 && boundingBox.height > 0)                
-                displayMode = SELECTING_BOUNDINGBOX;   // set the display mode
-            cout << "\n[Bounding Box Information]" << endl;
-            cout << "  x : " << boundingBox.x << endl;
-            cout << "  y : " << boundingBox.y << endl;
-            cout << "  w : " << boundingBox.width << endl;
-            cout << "  h : " << boundingBox.height << endl;
-            break;        
-    }
-}
+Rect2d boundingBox;
 
 int main(int argc, char **argv)
 {
@@ -106,9 +63,9 @@ int main(int argc, char **argv)
     {
         // display User mannual to the console window
         cout << "[Usage]" << endl;
-        cout << "  s key     : pause play" << endl;
-        cout << "  SPACE BAR : restart play" << endl;
-        cout << "  ESC       : exit play\n" << endl;
+        cout << "  b              : pause play and set a bounding box" << endl;        
+        cout << "  SPACE or ENTER : tracking with the bounding box" << endl;        
+        cout << "  ESC            : exit play\n" << endl;
 
         // get the video file resolution
         videoResol = Size((int)inputVideo.get(CAP_PROP_FRAME_WIDTH), (int)inputVideo.get(CAP_PROP_FRAME_HEIGHT));
@@ -122,34 +79,42 @@ int main(int argc, char **argv)
         cout << "  FPS    : " << videoFps << endl;
     }
 
-    ///////////////////////////////////////////////////
-    // Play the video
-    ///////////////////////////////////////////////////    
-    
     // single frame of the input video
     Mat singleFrame;
+
 
     // Create a window to display the output video
     // The first text parameter should be same with imshow()
     namedWindow("OutputWindow", WINDOW_NORMAL); // WINDOW_AUTOSIZE, WINDOW_NORMAL
-    
+
     // delay time between frames
     int initDelay = 1000 / videoFps;
-    // for keyboard event handle
-    int newDelay = initDelay;
-    // User input keyboard key
+
+    // User typed key
     int inputKey = 0;
 
-    // for mouse event handle
-    setMouseCallback("OutputWindow", onMouse, (void *)&singleFrame);
-
     // text position to video
-    Point textPosition;
-    textPosition.x = 50;
-    textPosition.y = 50;
+    Point textLine1;
+    textLine1.x = 50;
+    textLine1.y = 50;
+
+    Point textLine2;
+    textLine2.x = 50;
+    textLine2.y = 100;
+
+    // Tracker
+    Ptr<Tracker> csrtTracker;
+    csrtTracker = TrackerCSRT::create();    
+    bool isTracking = false;
+    bool trackingSuccess = false;
+
+    // calculate fps
+    double playFps = 0;
+    int64 startTick;    // Start time
+    int64 endTick;    // End time
 
     while (true)
-    {
+    {   
         // Grab a single image from the video file
         inputVideo >> singleFrame;
 
@@ -157,24 +122,60 @@ int main(int argc, char **argv)
         if (singleFrame.empty())
             break;
 
-        // put some text on the output video
-        putText(singleFrame, "Need some text here", textPosition, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
+        if(isTracking == true)
+            trackingSuccess = csrtTracker->update(singleFrame, boundingBox);
+        
+        if(trackingSuccess)
+        {
+            // draw the bounding box
+            rectangle(singleFrame, boundingBox, Scalar(0, 0, 255), 2);
+            isTracking = true;
+        }
+        else
+        {               
+            isTracking = false;
+        }
+
+        endTick = getTickCount();   // Stop timer to here
+        playFps = getTickFrequency() / (endTick - startTick);        
+        startTick = getTickCount(); // Start timer from here
+
+        // display current mode
+        putText(singleFrame, isTracking ? "TRACKING" : "PLAYING", textLine1, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
+        putText(singleFrame, to_string(playFps), textLine2, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
 
         // show a signleframe
         imshow("OutputWindow", singleFrame);
-        
+                
         // Keyboard event handle
-        inputKey = waitKey(newDelay);
-        if (inputKey == 27)         // esc key to exit play
-            break;
-        else if (inputKey == 115)   // 's' key to stop play
-            newDelay = 0;
-        else if (inputKey == 32)    // space key to restart play
-            newDelay = initDelay;
-    }
+        inputKey = waitKey(initDelay);        
+        //inputKey = waitKey(1);        
 
+        if (inputKey == 27) // esc key to exit play
+            break;
+        else if (inputKey == 66 || inputKey == 98) // 'b' or 'B' key to set a bounding box
+        {         
+            boundingBox = selectROI("OutputWindow", singleFrame, false, false); //opencv_contrib
+            
+            if(boundingBox.area() > 0.0)
+            {                
+                csrtTracker = TrackerCSRT::create();
+                csrtTracker->init(singleFrame, boundingBox);     
+                isTracking = true;
+            } 
+            else
+            {
+                // destruct the tracker
+                csrtTracker->~Tracker();
+                isTracking = false;  
+                trackingSuccess = false;              
+            }            
+        }
+    }
     // destroy output windows
     destroyAllWindows();
 
     return 0;
 }
+
+ //cv::getTickCount();
