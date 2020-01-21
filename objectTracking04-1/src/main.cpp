@@ -28,6 +28,14 @@ using namespace cv;
 // user selected bounding box
 Rect2d boundingBox;
 
+// position of the slider bar
+int g_slider_position = 0;
+
+// input Video
+VideoCapture inputVideo;
+
+void onChange(int pos, void* userdata);
+
 int main(int argc, char **argv)
 {
     // user input video file
@@ -45,9 +53,10 @@ int main(int argc, char **argv)
     }
 
     // create VideoCapture objects
-    VideoCapture inputVideo(pVideo);
+    inputVideo = VideoCapture(pVideo);
     Size videoResol;
     int videoFps;
+    int videoTotalFrames;
 
     // if fail to open the video file
     if (!inputVideo.isOpened())
@@ -67,9 +76,11 @@ int main(int argc, char **argv)
         videoResol = Size((int)inputVideo.get(CAP_PROP_FRAME_WIDTH), (int)inputVideo.get(CAP_PROP_FRAME_HEIGHT));
         // get the video file fps
         videoFps = (int)(inputVideo.get(CAP_PROP_FPS));
+        // get the video file's total frame count
+        videoTotalFrames = inputVideo.get(CAP_PROP_FRAME_COUNT);
         // display video file info to the console window
         cout << "[Video information] " << pVideo << " is opened successfully." << endl;
-        cout << "  Total # of Frames         : " << inputVideo.get(CAP_PROP_FRAME_COUNT) << endl;
+        cout << "  Total # of Frames         : " << videoTotalFrames << endl;
         cout << "  Original Video FPS        : " << videoFps << endl;
         cout << "  Original Video Resolution : " << videoResol.width << "x" << videoResol.height << endl;
         cout << "  Output Video Resolution   : " << OUT_VIDEO_WIDTH << "x" << OUT_VIDEO_HEIGHT << endl;
@@ -90,11 +101,12 @@ int main(int argc, char **argv)
     // User typed key
     int inputKey = 0;
 
-    // text position to video
+    // text line1 position on video
     Point textLine1;
     textLine1.x = 50;
     textLine1.y = 50;
 
+    // text line2 position on video
     Point textLine2;
     textLine2.x = 50;
     textLine2.y = 100;
@@ -110,6 +122,9 @@ int main(int argc, char **argv)
     int64 startTick;    // Start time
     int64 endTick;    // End time
 
+    // TrackBar
+    createTrackbar("Move to Frame #", "OutputWindow", 0, videoTotalFrames, onChange);
+
     while (true)
     {   
         // Grab a single image from the video file
@@ -122,6 +137,7 @@ int main(int argc, char **argv)
         // Output video resolution
         resize(singleFrame, smallsingleFrame, Size(OUT_VIDEO_WIDTH, OUT_VIDEO_HEIGHT), 0, 0, 1);        
 
+        // Update the bounding box
         if(isTracking == true)
             trackingSuccess = csrtTracker->update(smallsingleFrame, boundingBox);
         
@@ -140,8 +156,7 @@ int main(int argc, char **argv)
         // Calculate real output FPS
         endTick = getTickCount();   // Stop timer to here
         // playFps = round((getTickFrequency() / (endTick - startTick))*100)/100;        
-        playFps = getTickFrequency() / (endTick - startTick);
-        
+        playFps = getTickFrequency() / (endTick - startTick);        
         startTick = getTickCount(); // Start timer from here
 
         // display current mode
@@ -150,7 +165,7 @@ int main(int argc, char **argv)
 
         // show a signleframe
         imshow("OutputWindow", smallsingleFrame);
-                
+        
         // Keyboard event handle
         inputKey = waitKey(initDelay);        
         //inputKey = waitKey(1);        
@@ -174,13 +189,20 @@ int main(int argc, char **argv)
                 isTracking = false;  
                 trackingSuccess = false;              
             }            
-        }
+        }                 
     }
     // destroy output windows
     destroyAllWindows();
 
     return 0;
 }
+
+// To handle the tarckbar move event
+void onChange(int pos, void* userdata)
+{
+    inputVideo.set(CAP_PROP_POS_FRAMES, pos);
+}
+
 
  //cv::getTickCount();
 
