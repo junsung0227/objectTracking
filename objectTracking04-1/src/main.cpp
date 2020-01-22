@@ -12,6 +12,8 @@
 
 // General includes
 #include <iostream>
+#include <string>
+#include <algorithm>
 
 // OpenCV includes
 #include <opencv2/opencv.hpp>
@@ -32,17 +34,31 @@ void onChange(int pos, void *userdata);
 
 int main(int argc, char **argv)
 {
+    cout << "[Usage]" << endl;
+    cout << "  ./executableName videoFileName (optional)trackerName" << endl;        
+    cout << "     trackerName : csrt(default), kcf, boosting, goturn, medianflow, mil, mosse, tld" << endl;
+    cout << "     ex) ./objectTracking videofilename.mp4 csrt" << endl;
+
     // user input video file
     string pVideo;
 
     // Check the parameter validation
-    if (argc > 1)
+    //int trackerName = 0;    // default tracker is CSRT
+    string trackerName;
+    if (argc == 2)
     {
         pVideo = string(argv[1]);
     }
+    else if (argc == 3)
+    {
+        pVideo = string(argv[1]);
+        trackerName = string(argv[2]);
+        // string converter to upper case
+        transform(trackerName.begin(), trackerName.end(), trackerName.begin(), ::toupper);
+    }
     else
     {
-        cout << "\n Usage : ./objectTracking videofilename.mp4" << endl;
+        cout << "ERROR : Check the USAGE guide first!" << endl;
         return -1;
     }
 
@@ -109,9 +125,13 @@ int main(int argc, char **argv)
     textLine2.x = 50;
     textLine2.y = 100;
 
+    // text line3 position on video
+    Point textLine3;
+    textLine3.x = 50;
+    textLine3.y = 150;
+
     // Tracker
-    Ptr<Tracker> csrtTracker;
-    csrtTracker = TrackerCSRT::create();
+    Ptr<Tracker> myTracker;    
     bool isTracking = false;
     bool trackingSuccess = false;
 
@@ -138,7 +158,8 @@ int main(int argc, char **argv)
 
         // Update the bounding box
         if (isTracking == true)
-            trackingSuccess = csrtTracker->update(smallsingleFrame, boundingBox);
+            trackingSuccess = myTracker->update(smallsingleFrame, boundingBox);
+            //trackingSuccess = csrtTracker->update(smallsingleFrame, boundingBox);
 
         // If fail to track
         if (trackingSuccess)
@@ -159,12 +180,14 @@ int main(int argc, char **argv)
         startTick = getTickCount(); // Start timer from here
 
         // display current mode
-        putText(smallsingleFrame, isTracking ? "TRACKING" : "PLAYING", textLine1, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
+        putText(smallsingleFrame, isTracking ? ("TRACKING : " + trackerName) : "PLAYING", textLine1, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
         putText(smallsingleFrame, "FPS : " + to_string(playFps).substr(0, to_string(playFps).find('.') + 3), textLine2, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
+        putText(smallsingleFrame, "Frame # : " + to_string((int)inputVideo.get(CAP_PROP_POS_FRAMES)), textLine3, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
 
         // Trackbar is working but too slow, so comment out at this time
+        // Rather than display on the Trackbar, I will display the frame number on image
         // For later on, DO NOT REMOVE THIS.
-        //setTrackbarPos("Move to Frame #", "OutputWindow", inputVideo.get(CAP_PROP_POS_FRAMES));
+        // setTrackbarPos("Move to Frame #", "OutputWindow", inputVideo.get(CAP_PROP_POS_FRAMES));
 
         // show a signleframe
         imshow("OutputWindow", smallsingleFrame);
@@ -181,14 +204,30 @@ int main(int argc, char **argv)
 
             if (boundingBox.area() > 0.0)
             {
-                csrtTracker = TrackerCSRT::create();
-                csrtTracker->init(smallsingleFrame, boundingBox);
+                if(trackerName == "CSRT")
+                    myTracker = TrackerCSRT::create();
+                else if (trackerName == "KCF")
+                    myTracker = TrackerKCF::create();
+                else if (trackerName == "BOOSTING")
+                    myTracker = TrackerBoosting::create();
+                else if (trackerName == "GOTURN")
+                    myTracker = TrackerGOTURN::create();
+                else if (trackerName == "MEDIANFLOW")
+                    myTracker = TrackerMedianFlow::create();
+                else if (trackerName == "MIL")
+                    myTracker = TrackerMIL::create();
+                else if (trackerName == "MOSSE")
+                    myTracker = TrackerMOSSE::create();
+                else if (trackerName == "TLD")
+                    myTracker = TrackerTLD::create();
+
+                myTracker->init(smallsingleFrame, boundingBox);
                 isTracking = true;
             }
             else
             {
-                // destruct the tracker
-                csrtTracker->~Tracker();
+                // destruct the tracker                
+                myTracker->~Tracker();
                 isTracking = false;
                 trackingSuccess = false;
             }
