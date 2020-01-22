@@ -28,13 +28,7 @@ using namespace cv;
 // user selected bounding box
 Rect2d boundingBox;
 
-// position of the slider bar
-int g_slider_position = 0;
-
-// input Video
-VideoCapture inputVideo;
-
-void onChange(int pos, void* userdata);
+void onChange(int pos, void *userdata);
 
 int main(int argc, char **argv)
 {
@@ -52,6 +46,9 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    // input Video
+    VideoCapture inputVideo;
+
     // create VideoCapture objects
     inputVideo = VideoCapture(pVideo);
     Size videoResol;
@@ -68,9 +65,10 @@ int main(int argc, char **argv)
     {
         // display User mannual to the console window
         cout << "[Usage]" << endl;
-        cout << "  b              : Pause play to set a bounding box" << endl;        
-        cout << "  SPACE or ENTER : Tracking with the bounding box" << endl;        
-        cout << "  ESC            : Exit play\n" << endl;
+        cout << "  b              : Pause play to set a bounding box" << endl;
+        cout << "  SPACE or ENTER : Tracking with the bounding box" << endl;
+        cout << "  ESC            : Exit play\n"
+             << endl;
 
         // get the video file resolution
         videoResol = Size((int)inputVideo.get(CAP_PROP_FRAME_WIDTH), (int)inputVideo.get(CAP_PROP_FRAME_HEIGHT));
@@ -113,20 +111,21 @@ int main(int argc, char **argv)
 
     // Tracker
     Ptr<Tracker> csrtTracker;
-    csrtTracker = TrackerCSRT::create();    
+    csrtTracker = TrackerCSRT::create();
     bool isTracking = false;
     bool trackingSuccess = false;
 
     // calculate fps
     double playFps = 0;
-    int64 startTick;    // Start time
-    int64 endTick;    // End time
+    int64 startTick; // Start time
+    int64 endTick;   // End time
 
     // TrackBar
-    createTrackbar("Move to Frame #", "OutputWindow", 0, videoTotalFrames, onChange);
+    int playingPosition = 0;
+    createTrackbar("Move to Frame #", "OutputWindow", &playingPosition, videoTotalFrames, onChange, &inputVideo);
 
     while (true)
-    {   
+    {
         // Grab a single image from the video file
         inputVideo >> singleFrame;
 
@@ -135,61 +134,65 @@ int main(int argc, char **argv)
             break;
 
         // Output video resolution
-        resize(singleFrame, smallsingleFrame, Size(OUT_VIDEO_WIDTH, OUT_VIDEO_HEIGHT), 0, 0, 1);        
+        resize(singleFrame, smallsingleFrame, Size(OUT_VIDEO_WIDTH, OUT_VIDEO_HEIGHT), 0, 0, 1);
 
         // Update the bounding box
-        if(isTracking == true)
+        if (isTracking == true)
             trackingSuccess = csrtTracker->update(smallsingleFrame, boundingBox);
-        
+
         // If fail to track
-        if(trackingSuccess)
+        if (trackingSuccess)
         {
             // draw the bounding box
             rectangle(smallsingleFrame, boundingBox, Scalar(0, 0, 255), 2);
             isTracking = true;
         }
         else
-        {               
+        {
             isTracking = false;
         }
 
         // Calculate real output FPS
-        endTick = getTickCount();   // Stop timer to here
-        // playFps = round((getTickFrequency() / (endTick - startTick))*100)/100;        
-        playFps = getTickFrequency() / (endTick - startTick);        
+        endTick = getTickCount(); // Stop timer to here
+        // playFps = round((getTickFrequency() / (endTick - startTick))*100)/100;
+        playFps = getTickFrequency() / (endTick - startTick);
         startTick = getTickCount(); // Start timer from here
 
         // display current mode
         putText(smallsingleFrame, isTracking ? "TRACKING" : "PLAYING", textLine1, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
         putText(smallsingleFrame, "FPS : " + to_string(playFps).substr(0, to_string(playFps).find('.') + 3), textLine2, FONT_HERSHEY_SIMPLEX, 1, Scalar(0), 3);
 
+        // Trackbar is working but too slow, so comment out at this time
+        // For later on, DO NOT REMOVE THIS.
+        //setTrackbarPos("Move to Frame #", "OutputWindow", inputVideo.get(CAP_PROP_POS_FRAMES));
+
         // show a signleframe
         imshow("OutputWindow", smallsingleFrame);
-        
+
         // Keyboard event handle
-        inputKey = waitKey(initDelay);        
-        //inputKey = waitKey(1);        
+        inputKey = waitKey(initDelay);
+        //inputKey = waitKey(1);
 
         if (inputKey == 27) // esc key to exit play
             break;
         else if (inputKey == 66 || inputKey == 98) // 'b' or 'B' key to set a bounding box
-        {         
+        {
             boundingBox = selectROI("OutputWindow", smallsingleFrame, false, false); //opencv_contrib
-            
-            if(boundingBox.area() > 0.0)
-            {                
+
+            if (boundingBox.area() > 0.0)
+            {
                 csrtTracker = TrackerCSRT::create();
-                csrtTracker->init(smallsingleFrame, boundingBox);     
+                csrtTracker->init(smallsingleFrame, boundingBox);
                 isTracking = true;
-            } 
+            }
             else
             {
                 // destruct the tracker
                 csrtTracker->~Tracker();
-                isTracking = false;  
-                trackingSuccess = false;              
-            }            
-        }                 
+                isTracking = false;
+                trackingSuccess = false;
+            }
+        }
     }
     // destroy output windows
     destroyAllWindows();
@@ -197,17 +200,17 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// To handle the tarckbar move event
-void onChange(int pos, void* userdata)
+// To handle the trackbar move event
+void onChange(int pos, void *userdata)
 {
-    inputVideo.set(CAP_PROP_POS_FRAMES, pos);
+    VideoCapture* vc = (VideoCapture *)userdata;
+    vc->set(CAP_PROP_POS_FRAMES, pos);
 }
 
-
- //cv::getTickCount();
+//cv::getTickCount();
 
 //// Change video resolution if you want
 //// 1980:1080 = 1.833:1
 ////  990: 540 = 1.833:1
-//inputVideo.set(CAP_PROP_FRAME_WIDTH,990);  
-//inputVideo.set(CAP_PROP_FRAME_HEIGHT,540);  
+//inputVideo.set(CAP_PROP_FRAME_WIDTH,990);
+//inputVideo.set(CAP_PROP_FRAME_HEIGHT,540);
