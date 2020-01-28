@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     cout << "[Usage]" << endl;
     cout << "  ./executableName videoFileName (optional)trackerName" << endl;        
     cout << "     trackerName : csrt(default), kcf, boosting, goturn, medianflow, mil, mosse, tld" << endl;
-    cout << "     ex) ./objectTracking videofilename.mp4 csrt" << endl;
+    cout << "     ex) ./objectTracking04-1 videofilename.mp4 csrt" << endl;
 
     // user input video file
     string pVideo;

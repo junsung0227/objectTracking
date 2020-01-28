@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": ["t1.mp4"],
+            "args": ["t1.mp4", "kcf"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
