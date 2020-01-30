@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 
     // Create a window to display the output video
     // The first text parameter should be same with imshow()
-    namedWindow("OutputWindow", WINDOW_NORMAL); // WINDOW_AUTOSIZE, WINDOW_NORMAL
+    namedWindow("OutputWindow", WINDOW_AUTOSIZE); // WINDOW_AUTOSIZE, WINDOW_NORMAL
 
     // delay time between frames
     int initDelay = 1000 / videoFps;
