@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-//  Creadted : Junsung Bae(junsung0227@koreanair.com)
+//  Creadted : Junsung Bae(junsung0227@gmail.com)
 //  Created Date : 2020-1-17
 //  Version : 1.0
 //  Description
