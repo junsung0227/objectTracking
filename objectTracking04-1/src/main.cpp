@@ -20,6 +20,13 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/tracking.hpp>
 
+// Cuda test
+#include <opencv2/cudaimgproc.hpp>
+#include <opencv2/cudaoptflow.hpp>
+#include <opencv2/cudaarithm.hpp>
+#include <opencv2/core/cuda.hpp>
+
+
 using namespace std;
 using namespace cv;
 
@@ -34,6 +41,9 @@ void onChange(int pos, void *userdata);
 
 int main(int argc, char **argv)
 {
+    // Cuda test    
+    cv::cuda::setDevice(0);
+
     cout << "[Usage]" << endl;
     cout << "  ./executableName videoFileName (optional)trackerName" << endl;        
     cout << "     trackerName : csrt(default), kcf, boosting, goturn, medianflow, mil, mosse, tld" << endl;
@@ -62,7 +72,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // input Video
+    // input Video    
     VideoCapture inputVideo;
 
     // create VideoCapture objects
@@ -102,8 +112,13 @@ int main(int argc, char **argv)
 
     // single frame of the input video
     Mat singleFrame;
+
     // the resolution of output video
     Mat smallsingleFrame;
+
+    // Cuda Test
+    cv::cuda::GpuMat singleFrameCuda;
+    cv::cuda::GpuMat smallsingleFrameCuda;    
 
     // Create a window to display the output video
     // The first text parameter should be same with imshow()
@@ -147,19 +162,28 @@ int main(int argc, char **argv)
     while (true)
     {
         // Grab a single image from the video file
-        inputVideo >> singleFrame;
+        inputVideo >> singleFrame;        
 
         // End condition, if there is not reamining frame.
         if (singleFrame.empty())
             break;
 
         // Output video resolution
-        resize(singleFrame, smallsingleFrame, Size(OUT_VIDEO_WIDTH, OUT_VIDEO_HEIGHT), 0, 0, 1);
+         resize(singleFrame, smallsingleFrame, Size(OUT_VIDEO_WIDTH, OUT_VIDEO_HEIGHT), 0, 0, 1);
 
+        // Output video resolution - Cuda Test
+        // singleFrameCuda.upload(singleFrame);    
+        // cv::cuda::resize(singleFrameCuda, smallsingleFrameCuda, Size(OUT_VIDEO_WIDTH, OUT_VIDEO_HEIGHT), 0, 0, 1);
+
+        
         // Update the bounding box
         if (isTracking == true)
             trackingSuccess = myTracker->update(smallsingleFrame, boundingBox);
-            //trackingSuccess = csrtTracker->update(smallsingleFrame, boundingBox);
+
+        // Update the bounding box - Cuda Test
+        // if (isTracking == true)
+        //     trackingSuccess = myTracker->update(smallsingleFrameCuda, boundingBox);       
+        // smallsingleFrameCuda.download(smallsingleFrame);   
 
         // If fail to track
         if (trackingSuccess)
@@ -189,7 +213,7 @@ int main(int argc, char **argv)
         // For later on, DO NOT REMOVE THIS.
         // setTrackbarPos("Move to Frame #", "OutputWindow", inputVideo.get(CAP_PROP_POS_FRAMES));
 
-        // show a signleframe
+        // show a signleframe        
         imshow("OutputWindow", smallsingleFrame);
 
         // Keyboard event handle
@@ -207,7 +231,7 @@ int main(int argc, char **argv)
                 if(trackerName == "CSRT")
                     myTracker = TrackerCSRT::create();
                 else if (trackerName == "KCF")
-                    myTracker = TrackerKCF::create();
+                    myTracker = TrackerKCF::create();                    
                 else if (trackerName == "BOOSTING")
                     myTracker = TrackerBoosting::create();
                 else if (trackerName == "GOTURN")
